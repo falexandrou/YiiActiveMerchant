@@ -1,0 +1,3 @@
+[submodule "lib/AktiveMerchant"]
+	path = lib/AktiveMerchant
+	url = git@github.com:akDeveloper/Aktive-Merchant.git
