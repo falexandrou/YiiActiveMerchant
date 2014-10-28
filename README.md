@@ -1,3 +1,6 @@
+NOT PRODUCTION READY YET
+=======================
+
 # YiiActiveMerchant
 
 Simple Component for Yii acting as wrapper for [ActiveMerchant](https://github.com/akDeveloper/Aktive-Merchant)
