@@ -110,7 +110,7 @@ class YiiActiveMerchant extends CApplicationComponent
      */
     protected function onBeforePurchase(CEvent $event)
     {
-        $this->raiseEvent('onBeforeRedirect', $event);
+        $this->raiseEvent('onBeforePurchase', $event);
     }
 
     /**
