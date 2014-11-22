@@ -82,16 +82,20 @@ class YiiActiveMerchant extends CApplicationComponent
 
     /**
      * @see CApplicationComponent::init()
-     * @throws CException
+     * @throws CException   on server's invalid setup
      */
     public function init()
     {
         parent::init();
+
+        // Register the component
         static::register();
 
+        // No curl? Problem
         if (!function_exists('curl_init'))
             throw new CException('Curl is required');
 
+        // No SimpleXML? problem
         if (!function_exists('simplexml_load_string'))
             throw new CException('SimpleXML is required');
 
@@ -99,6 +103,52 @@ class YiiActiveMerchant extends CApplicationComponent
             throw new CException('You have to provide a list of gateways first');
 
         AktiveMerchant\Billing\Base::mode($this->mode);
+    }
+
+    /**
+     * @param CEvent    the event to raise
+     */
+    protected function onBeforePurchase(CEvent $event)
+    {
+        $this->raiseEvent('onBeforeRedirect', $event);
+    }
+
+    /**
+     * @param CEvent    the event to raise after purchase
+     */
+    protected function onAfterPurchase(CEvent $event)
+    {
+        $this->raiseEvent('onAfterPurchase', $event);
+    }
+
+    /**
+     * @return boolean whether purchase should process
+     */
+    protected function beforePurchase()
+    {
+        if ($this->hasEventHandler('onBeforePurchase')) {
+            $event = new CEvent($this);
+            $this->onBeforePurchase($event);
+            return $event->isValid;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return boolean whether the part after the purchase was successful or not
+     */
+    public function afterPurchase()
+    {
+        if ($this->hasEventHandler('onAfterPurchase')) {
+            $event = new CEvent($this, array(
+                'buyer' => $this->getBuyerAttributes(),
+            ));
+            $this->onAfterPurchase($event);
+            return $event->isValid;
+        }
+
+        return true;
     }
 
     /**
@@ -155,6 +205,14 @@ class YiiActiveMerchant extends CApplicationComponent
     }
 
     /**
+     * @return array    the attributes of the buyer
+     */
+    public function getBuyerAttributes()
+    {
+        return array();
+    }
+
+    /**
      * @return double   the total price for all the items to purchase
      */
     public function getTotalPrice()
@@ -185,6 +243,9 @@ class YiiActiveMerchant extends CApplicationComponent
         $hasRequest = Yii::app()->hasComponent('request') && Yii::app()->request instanceof CHttpRequest;
         if (!$hasRequest)
             throw new CException("Sorry, but this can only run when the `request` component is set");
+
+        if (!$this->beforePurchase())
+            return false;
 
         // Get the current url for when the success url or the error url are not specified
         $currentUrl = Yii::app()->hasComponent('request') ? Yii::app()->request->requestUri : '/';
@@ -225,7 +286,9 @@ class YiiActiveMerchant extends CApplicationComponent
     public function doPurchase($money, $options=array())
     {
         $this->_lastResponse = $this->gateway->purchase($money, $options);
-        return $this->_lastResponse->success();
+        if ($this->_lastResponse->success())
+            return $this->afterPurchase();
+        return false;
     }
 
     /**
