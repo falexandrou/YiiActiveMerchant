@@ -81,6 +81,11 @@ class YiiActiveMerchant extends CApplicationComponent
     private $_lastResponse;
 
     /**
+     * @var array a list of IActiveMerchantPurchasable objects
+     */
+    private $_items;
+
+    /**
      * @see CApplicationComponent::init()
      * @throws CException   on server's invalid setup
      */
@@ -127,7 +132,10 @@ class YiiActiveMerchant extends CApplicationComponent
     protected function beforePurchase()
     {
         if ($this->hasEventHandler('onBeforePurchase')) {
-            $event = new CEvent($this);
+            $event = new CEvent($this, array(
+                'response'  => $this->getLastResponse(),
+                'items'     => $this->getItems(),
+            ));
             $this->onBeforePurchase($event);
             return $event->isValid;
         }
@@ -142,7 +150,9 @@ class YiiActiveMerchant extends CApplicationComponent
     {
         if ($this->hasEventHandler('onAfterPurchase')) {
             $event = new CEvent($this, array(
-                'buyer' => $this->getBuyerAttributes(),
+                'buyer'     => $this->getBuyerAttributes(),
+                'items'     => $this->getItems(),
+                'response'  => $this->getLastResponse(),
             ));
             $this->onAfterPurchase($event);
             return $event->isValid;
@@ -188,7 +198,11 @@ class YiiActiveMerchant extends CApplicationComponent
         if (!$model instanceof IActiveMerchantPurchasable)
             throw new CException("Product should be an instance of IActiveMerchantPurchasable");
 
+        if ($this->_items===null)
+            $this->_items=array();
+
         $items = isset($this->setup['items']) ? $this->setup['items'] : array();
+        array_push($this->_items, $model);
 
         $item = array(
 			'name' 			=> $model->title,
@@ -269,11 +283,40 @@ class YiiActiveMerchant extends CApplicationComponent
     }
 
     /**
+     * @return mixed the latest response got from payment gateway
+     */
+    public function getLastResponse()
+    {
+        return $this->_lastResponse;
+    }
+
+    /**
      * @return string   the url to redirect after the
      */
     public function getPaymentUrl()
     {
         return $this->gateway->urlForToken($this->_lastResponse->token());
+    }
+
+    /**
+     * @return array a list of IActiveMerchantPurchasable objects
+     */
+    public function getItems()
+    {
+        return $this->_items;
+    }
+
+    /**
+     * @param array a list of items to be purchased
+     */
+    public function setItems(array $items)
+    {
+        foreach ($items as $item) {
+            if (!$item instanceof IActiveMerchantPurchasable)
+                throw new CException('Items to be purchased should implement IActiveMerchantPurchasable interface');
+        }
+
+        $this->_items = $items;
     }
 
     /**
@@ -285,6 +328,9 @@ class YiiActiveMerchant extends CApplicationComponent
      */
     public function doPurchase($money, $options=array())
     {
+        if ($this->items === null)
+            throw new CException('You have to specify the items that got purchased');
+
         $this->_lastResponse = $this->gateway->purchase($money, $options);
         if ($this->_lastResponse->success())
             return $this->afterPurchase();
