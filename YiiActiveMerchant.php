@@ -71,6 +71,11 @@ class YiiActiveMerchant extends CApplicationComponent
     protected $currency     = self::CURRENCY_EUR;
 
     /**
+     * @var string the gateway name (ie. self::GATEWAY_PAYPAL)
+     */
+    private $_gatewayName;
+
+    /**
      * @var \AktiveMerchant\Billing\Gateway the gateway to use
      */
     private $_gateway;
@@ -135,6 +140,7 @@ class YiiActiveMerchant extends CApplicationComponent
             $event = new CEvent($this, array(
                 'response'  => $this->getLastResponse(),
                 'items'     => $this->getItems(),
+                'gateway'   => $this->_gatewayName,
             ));
             $this->onBeforePurchase($event);
             return $event->isValid;
@@ -153,6 +159,7 @@ class YiiActiveMerchant extends CApplicationComponent
                 'buyer'     => $this->getBuyerAttributes(),
                 'items'     => $this->getItems(),
                 'response'  => $this->getLastResponse(),
+                'gateway'   => $this->_gatewayName,
             ));
             $this->onAfterPurchase($event);
             return $event->isValid;
@@ -347,6 +354,9 @@ class YiiActiveMerchant extends CApplicationComponent
     protected function initGateway($name)
     {
         if ($this->gatewayExists($name)) {
+            // Store the gateway name
+            $this->_gatewayName = $name;
+
             // Initialize the gateway
             $g = AktiveMerchant\Billing\Base::gateway($name, $this->gateways[$name]);
 
