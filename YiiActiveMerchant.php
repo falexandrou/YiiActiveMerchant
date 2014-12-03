@@ -124,11 +124,19 @@ class YiiActiveMerchant extends CApplicationComponent
     }
 
     /**
-     * @param CEvent    the event to raise after purchase
+     * @param CEvent    the event to raise
      */
-    protected function onAfterPurchase(CEvent $event)
+    protected function onBeforePayment(CEvent $event)
     {
-        $this->raiseEvent('onAfterPurchase', $event);
+        $this->raiseEvent('onBeforePayment', $event);
+    }
+
+    /**
+     * @param CEvent    the event to raise
+     */
+    protected function onAfterPayment(CEvent $event)
+    {
+        $this->raiseEvent('onAfterPayment', $event);
     }
 
     /**
@@ -143,7 +151,23 @@ class YiiActiveMerchant extends CApplicationComponent
                 'gateway'   => $this->_gatewayName,
             ));
             $this->onBeforePurchase($event);
-            return $event->isValid;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return void
+     */
+    protected function beforePayment()
+    {
+        if ($this->hasEventHandler('onBeforePayment')) {
+            $event = new CEvent($this, array(
+                'response'  => $this->getLastResponse(),
+                'items'     => $this->getItems(),
+                'gateway'   => $this->_gatewayName,
+            ));
+            $this->onBeforePayment($event);
         }
 
         return true;
@@ -162,7 +186,24 @@ class YiiActiveMerchant extends CApplicationComponent
                 'gateway'   => $this->_gatewayName,
             ));
             $this->onAfterPurchase($event);
-            return $event->isValid;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return boolean whether the part after the purchase was successful or not
+     */
+    public function afterPayment()
+    {
+        if ($this->hasEventHandler('onAfterPayment')) {
+            $event = new CEvent($this, array(
+                'buyer'     => $this->getBuyerAttributes(),
+                'items'     => $this->getItems(),
+                'response'  => $this->getLastResponse(),
+                'gateway'   => $this->_gatewayName,
+            ));
+            $this->onAfterPayment($event);
         }
 
         return true;
@@ -285,8 +326,12 @@ class YiiActiveMerchant extends CApplicationComponent
         // Store the last response so that it can be used for url generation etc
         $this->_lastResponse = $this->gateway->setupPurchase($this->totalPrice, $this->setup, $options);
 
+        $success = $this->_lastResponse->success();
+        if ($success)
+            $this->beforePayment();
+
         // Finally return a boolean whether we were successful or not
-        return $this->_lastResponse->success();
+        return $success;
     }
 
     /**
@@ -339,8 +384,9 @@ class YiiActiveMerchant extends CApplicationComponent
             throw new CException('You have to specify the items that got purchased');
 
         $this->_lastResponse = $this->gateway->purchase($money, $options);
+
         if ($this->_lastResponse->success())
-            return $this->afterPurchase();
+            return $this->afterPayment();
         return false;
     }
 
