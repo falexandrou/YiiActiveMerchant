@@ -146,7 +146,7 @@ class YiiActiveMerchant extends CApplicationComponent
     {
         if ($this->hasEventHandler('onBeforePurchase')) {
             $event = new CEvent($this, array(
-                'response'  => $this->getLastResponse(),
+                'response'  => $this->getResponse(),
                 'items'     => $this->getItems(),
                 'gateway'   => $this->_gatewayName,
             ));
@@ -163,7 +163,7 @@ class YiiActiveMerchant extends CApplicationComponent
     {
         if ($this->hasEventHandler('onBeforePayment')) {
             $event = new CEvent($this, array(
-                'response'  => $this->getLastResponse(),
+                'response'  => $this->getResponse(),
                 'items'     => $this->getItems(),
                 'gateway'   => $this->_gatewayName,
             ));
@@ -182,7 +182,7 @@ class YiiActiveMerchant extends CApplicationComponent
             $event = new CEvent($this, array(
                 'buyer'     => $this->getBuyerAttributes(),
                 'items'     => $this->getItems(),
-                'response'  => $this->getLastResponse(),
+                'response'  => $this->getResponse(),
                 'gateway'   => $this->_gatewayName,
             ));
             $this->onAfterPurchase($event);
@@ -200,7 +200,7 @@ class YiiActiveMerchant extends CApplicationComponent
             $event = new CEvent($this, array(
                 'buyer'     => $this->getBuyerAttributes(),
                 'items'     => $this->getItems(),
-                'response'  => $this->getLastResponse(),
+                'response'  => $this->getResponse(),
                 'gateway'   => $this->_gatewayName,
             ));
             $this->onAfterPayment($event);
@@ -223,6 +223,14 @@ class YiiActiveMerchant extends CApplicationComponent
     public function getGateway()
     {
         return $this->_gateway;
+    }
+
+    /**
+     * @return string the gateway's name
+     */
+    public function getGatewayName()
+    {
+        return $this->_gatewayName;
     }
 
     /**
@@ -337,7 +345,7 @@ class YiiActiveMerchant extends CApplicationComponent
     /**
      * @return mixed the latest response got from payment gateway
      */
-    public function getLastResponse()
+    public function getResponse()
     {
         return $this->_lastResponse;
     }
@@ -380,9 +388,6 @@ class YiiActiveMerchant extends CApplicationComponent
      */
     public function doPurchase($money, $options=array())
     {
-        if ($this->items === null)
-            throw new CException('You have to specify the items that got purchased');
-
         $this->_lastResponse = $this->gateway->purchase($money, $options);
 
         if ($this->_lastResponse->success())
