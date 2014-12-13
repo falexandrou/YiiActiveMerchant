@@ -300,6 +300,25 @@ class YiiActiveMerchant extends CApplicationComponent
     }
 
     /**
+     * @return integer the quantity for the item(s) specified
+     */
+    public function getQuantity($itemId=null)
+    {
+        if (!isset($this->setup['items']))
+            return 0;
+
+        $q = 0;
+        foreach ($this->setup['items'] as $item) {
+            if ($itemId !== null && $itemId != $item['id'])
+                continue;
+
+            $q += (int)$item['quantity'];
+        }
+
+        return $q;
+    }
+
+    /**
      * Initializes a purchase
      *
      * @param string    the url to go after a successful purchase
