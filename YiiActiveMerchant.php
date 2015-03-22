@@ -351,7 +351,7 @@ class YiiActiveMerchant extends CApplicationComponent
         ), $this->setup);
 
         // Store the last response so that it can be used for url generation etc
-        $this->_lastResponse = $this->gateway->setupPurchase($this->totalPrice, $this->setup, $options);
+        $this->_lastResponse = $this->gateway->setupPurchase($this->totalPrice, CMap::mergeArray($this->setup, array('extra_options' => $options)));
 
         $success = $this->_lastResponse->success();
         if ($success)
